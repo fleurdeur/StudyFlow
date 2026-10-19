@@ -97,6 +97,7 @@ Thanks to everyone who has contributed to this project:
 
 <p align="left">
 <a href="https://github.com/fleurdeur" title="fleurdeur"><img src="https://avatars.githubusercontent.com/u/319274093?v=4&s=64" width="64" height="64" alt="fleurdeur" style="border-radius:50%" /></a>
+<a href="https://github.com/ShinGTM" title="ShinGTM"><img src="https://avatars.githubusercontent.com/u/109656048?v=4&s=64" width="64" height="64" alt="ShinGTM" style="border-radius:50%" /></a>
 </p>
 
 [See the full list of contributors →](https://github.com/fleurdeur/StudyFlow/graphs/contributors)
