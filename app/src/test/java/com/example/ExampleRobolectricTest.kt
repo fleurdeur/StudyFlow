@@ -66,7 +66,7 @@ class ExampleRobolectricTest {
   fun `test real date time calculations`() {
     val today = RealDateTimeUtils.getToday()
     assertNotNull(today)
-    val weekDays = RealDateTimeUtils.getCurrentWeekDays()
+    val weekDays = RealDateTimeUtils.getDaysForWeek()
     assertEquals(7, weekDays.size)
     assertTrue(weekDays.any { it.isToday })
   }

@@ -321,7 +321,7 @@ private fun FancyMobbinNoteViewer(
                 if (tags.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(tags) { tag ->
+                        items(tags, key = { it }) { tag ->
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -417,7 +417,7 @@ private fun FancyMobbinNoteEditor(
             modifier = Modifier.padding(bottom = 8.dp)
         ) {
             val list = if (courses.isEmpty()) listOf(Course("GEN100", "General Studies")) else courses
-            items(list) { course ->
+            items(list, key = { it.code }) { course ->
                 val isSelected = courseCode == course.code
                 Box(
                     modifier = Modifier

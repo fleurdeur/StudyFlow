@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.AppViewModel
 import com.example.StudyFlowUiState
 import com.example.data.*
@@ -200,7 +201,7 @@ fun ScheduleScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
-                    items(weekDays) { dayInfo ->
+                    items(weekDays, key = { it.dayOfWeek }) { dayInfo ->
                         val isSelected = state.selectedDayOfWeek == dayInfo.dayOfWeek
                         Box(
                             modifier = Modifier
@@ -443,9 +444,9 @@ private fun PomodoroFocusRingCard(
     accent: Color
 ) {
     val palette = LocalThemePalette.current
-    val isFocus = state.isPomodoroFocus
-    val isRunning = state.isPomodoroRunning
-    val remaining = state.pomodoroRemainingSec
+    val isFocus by viewModel.isPomodoroFocus.collectAsStateWithLifecycle()
+    val isRunning by viewModel.isPomodoroRunning.collectAsStateWithLifecycle()
+    val remaining by viewModel.pomodoroRemainingSec.collectAsStateWithLifecycle()
     val totalSec = (if (isFocus) state.preferences.pomodoroFocusMinutes else state.preferences.pomodoroBreakMinutes) * 60
     val progress = (1f - (remaining.toFloat() / totalSec.toFloat())).coerceIn(0f, 1f)
 
@@ -675,7 +676,7 @@ private fun GpaSimulatorDialog(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(projections) { proj ->
+                    items(projections, key = { it.courseCode }) { proj ->
                         IosCard(modifier = Modifier.fillMaxWidth(), backgroundColor = palette.cardBg) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

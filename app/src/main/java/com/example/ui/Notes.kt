@@ -142,7 +142,7 @@ fun NotesScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(vertical = 2.dp)
                     ) {
-                        items(courseFilters) { course ->
+                        items(courseFilters, key = { it }) { course ->
                             val isSelected = course == sortFilter.selectedCategory
                             Box(
                                 modifier = Modifier
@@ -246,7 +246,7 @@ fun NotesScreen(
                         if (note.tags.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(10.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(note.tags) { tag ->
+                                items(note.tags, key = { it }) { tag ->
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))

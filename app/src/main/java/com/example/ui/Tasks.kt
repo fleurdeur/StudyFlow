@@ -92,7 +92,7 @@ fun TasksScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
-                    items(filters) { filter ->
+                    items(filters, key = { it }) { filter ->
                         val isSelected = filter == sortFilter.selectedStatus
                         Box(
                             modifier = Modifier

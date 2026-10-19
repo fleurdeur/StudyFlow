@@ -130,6 +130,15 @@ class AppViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(StudyFlowUiState())
     val uiState: StateFlow<StudyFlowUiState> = _uiState.asStateFlow()
 
+    private val _pomodoroRemainingSec = MutableStateFlow(25 * 60)
+    val pomodoroRemainingSec: StateFlow<Int> = _pomodoroRemainingSec.asStateFlow()
+
+    private val _isPomodoroRunning = MutableStateFlow(false)
+    val isPomodoroRunning: StateFlow<Boolean> = _isPomodoroRunning.asStateFlow()
+
+    private val _isPomodoroFocus = MutableStateFlow(true)
+    val isPomodoroFocus: StateFlow<Boolean> = _isPomodoroFocus.asStateFlow()
+
     private var pomodoroJob: Job? = null
 
     init {
@@ -319,27 +328,30 @@ class AppViewModel : ViewModel() {
 
     // Pomodoro Liquid Focus Timer
     fun startPomodoro() {
-        if (_uiState.value.isPomodoroRunning) return
+        if (_isPomodoroRunning.value) return
+        _isPomodoroRunning.value = true
         _uiState.update { it.copy(isPomodoroRunning = true) }
 
         pomodoroJob?.cancel()
         pomodoroJob = viewModelScope.launch {
-            while (_uiState.value.isPomodoroRunning && _uiState.value.pomodoroRemainingSec > 0) {
+            while (_isPomodoroRunning.value && _pomodoroRemainingSec.value > 0) {
                 delay(1000)
-                _uiState.update {
-                    val remaining = it.pomodoroRemainingSec - 1
-                    if (remaining <= 0) {
-                        // Switch between focus and break
-                        val nextFocus = !it.isPomodoroFocus
-                        val nextSec = if (nextFocus) it.preferences.pomodoroFocusMinutes * 60 else it.preferences.pomodoroBreakMinutes * 60
+                val remaining = _pomodoroRemainingSec.value - 1
+                if (remaining <= 0) {
+                    val nextFocus = !_isPomodoroFocus.value
+                    val nextSec = if (nextFocus) _uiState.value.preferences.pomodoroFocusMinutes * 60 else _uiState.value.preferences.pomodoroBreakMinutes * 60
+                    _isPomodoroFocus.value = nextFocus
+                    _pomodoroRemainingSec.value = nextSec
+                    _uiState.update {
                         it.copy(
                             isPomodoroFocus = nextFocus,
                             pomodoroRemainingSec = nextSec,
+                            isPomodoroRunning = true,
                             studyStreak = if (it.isPomodoroFocus) it.studyStreak + 1 else it.studyStreak
                         )
-                    } else {
-                        it.copy(pomodoroRemainingSec = remaining)
                     }
+                } else {
+                    _pomodoroRemainingSec.value = remaining
                 }
             }
         }
@@ -347,26 +359,31 @@ class AppViewModel : ViewModel() {
 
     fun pausePomodoro() {
         pomodoroJob?.cancel()
-        _uiState.update { it.copy(isPomodoroRunning = false) }
+        _isPomodoroRunning.value = false
+        _uiState.update { it.copy(isPomodoroRunning = false, pomodoroRemainingSec = _pomodoroRemainingSec.value) }
     }
 
     fun resetPomodoro() {
         pomodoroJob?.cancel()
+        _isPomodoroRunning.value = false
+        _isPomodoroFocus.value = true
+        val defaultSec = _uiState.value.preferences.pomodoroFocusMinutes * 60
+        _pomodoroRemainingSec.value = defaultSec
         _uiState.update {
             it.copy(
                 isPomodoroRunning = false,
                 isPomodoroFocus = true,
-                pomodoroRemainingSec = it.preferences.pomodoroFocusMinutes * 60
+                pomodoroRemainingSec = defaultSec
             )
         }
     }
 
     fun togglePomodoroFocusMode() {
-        _uiState.update {
-            val nextFocus = !it.isPomodoroFocus
-            val sec = if (nextFocus) it.preferences.pomodoroFocusMinutes * 60 else it.preferences.pomodoroBreakMinutes * 60
-            it.copy(isPomodoroFocus = nextFocus, pomodoroRemainingSec = sec)
-        }
+        val nextFocus = !_isPomodoroFocus.value
+        val sec = if (nextFocus) _uiState.value.preferences.pomodoroFocusMinutes * 60 else _uiState.value.preferences.pomodoroBreakMinutes * 60
+        _isPomodoroFocus.value = nextFocus
+        _pomodoroRemainingSec.value = sec
+        _uiState.update { it.copy(isPomodoroFocus = nextFocus, pomodoroRemainingSec = sec) }
     }
 
     // Smart Attendance & Timetable Automation
@@ -554,8 +571,10 @@ class AppViewModel : ViewModel() {
         if (query.isBlank()) {
             _uiState.update { it.copy(semanticResults = emptyList(), isSemanticSearchActive = false) }
         } else {
-            val results = NativeBridge.semanticSearch(query, 6)
-            _uiState.update { it.copy(semanticResults = results, isSemanticSearchActive = true) }
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                val results = NativeBridge.semanticSearch(query, 6)
+                _uiState.update { it.copy(semanticResults = results, isSemanticSearchActive = true) }
+            }
         }
     }
 
@@ -843,25 +862,27 @@ class AppViewModel : ViewModel() {
     }
 
     fun convertNoteToReviewer(note: NoteItem) {
-        val extracted = NativeBridge.parseDocument(note.title, note.content)
-        val newDeck = ReviewerDeck(
-            id = UUID.randomUUID().toString(),
-            title = "${note.title} (Reviewer)",
-            courseCode = extracted.courseCode,
-            description = "Synthesized from Note Vault: ${note.title}",
-            cards = extracted.cards,
-            keyTakeaways = extracted.keyPoints,
-            masteredCount = 0,
-            lastReviewedAgo = "Never",
-            sourceDoc = "Note: ${note.title}"
-        )
-        NativeBridge.indexDocument(newDeck.id, newDeck.title, newDeck.description, "Reviewer")
-        _uiState.update {
-            it.copy(
-                decks = listOf(newDeck) + it.decks,
-                currentScreen = AppScreen.REVIEWER,
-                isNotePageOpen = false
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val extracted = NativeBridge.parseDocument(note.title, note.content)
+            val newDeck = ReviewerDeck(
+                id = UUID.randomUUID().toString(),
+                title = "${note.title} (Reviewer)",
+                courseCode = extracted.courseCode,
+                description = "Synthesized from Note Vault: ${note.title}",
+                cards = extracted.cards,
+                keyTakeaways = extracted.keyPoints,
+                masteredCount = 0,
+                lastReviewedAgo = "Never",
+                sourceDoc = "Note: ${note.title}"
             )
+            NativeBridge.indexDocument(newDeck.id, newDeck.title, newDeck.description, "Reviewer")
+            _uiState.update {
+                it.copy(
+                    decks = listOf(newDeck) + it.decks,
+                    currentScreen = AppScreen.REVIEWER,
+                    isNotePageOpen = false
+                )
+            }
         }
     }
 

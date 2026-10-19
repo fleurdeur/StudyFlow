@@ -16,6 +16,13 @@ import com.example.ui.theme.getAccentColor
 
 class MainActivity : ComponentActivity() {
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            com.example.nativebridge.NativeBridge.clearVectorIndex()
+        }
+    }
+
     private val viewModel: AppViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,9 +30,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            val isDark = state.preferences.isDarkMode
-            val isEPaper = state.preferences.isEPaperMode
-            val accent = getAccentColor(state.preferences.accentGlassTheme, isDark)
+            val preferences = state.preferences
+            val isDark = preferences.isDarkMode
+            val isEPaper = preferences.isEPaperMode
+            val accent = getAccentColor(preferences.accentGlassTheme, isDark)
 
             StudyFlowTheme(isDarkMode = isDark, accentColor = accent, isEPaperMode = isEPaper) {
                 Surface(modifier = Modifier.fillMaxSize()) {

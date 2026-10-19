@@ -404,7 +404,7 @@ private fun DeckPreviewDialog(
                         }
                     }
 
-                    items(deck.cards) { card ->
+                    items(deck.cards, key = { it.question }) { card ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
